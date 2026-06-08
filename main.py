@@ -4,9 +4,8 @@ from pipeline import Application
 from clsPipeline import *
 
 def main() -> None:
-    root = Tk()
-    Application(root)
-    root.mainloop()
+    app = Application()
+    app.mainloop()
     """NovoPipeline = Pipeline(1,"TurnoManha", 5, 100, tempoDeProducao(180, 60))
     novoGrafo = Grafo()
     tamanhoPipeline = NovoPipeline.tamanho

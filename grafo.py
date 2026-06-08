@@ -1,26 +1,23 @@
 from dataclasses import dataclass, field
 
 @dataclass
-class PropriedadesVertice:
-    # Define exatamente o que o vértice vai conter
-    vizinhos: list[any] = field(default_factory=list)
-    #peso: int = 0
-    #cor: str = "branco"  # Útil para algoritmos como BFS/DFS
-
-@dataclass
 class Grafo:
     # O dict agora mapeia o nome do vértice para a classe de propriedades
-    grafo: dict[any, PropriedadesVertice] = field(default_factory=dict)
+    grafo: dict[any] = field(default_factory=dict)
+    def __init__(self):
+        self.grafo = {} # Seu dicionário interno
 
-    def adicionar_vertice(self, vertice):
+    # Adicione este método mágico para permitir o uso de colchetes []
+    def __getitem__(self, chave):
+        return self.grafo.get(chave, None)
+    def adicionar_vertice(self, vertice:str):
         if vertice not in self.grafo:
-            self.grafo[vertice] = PropriedadesVertice()
+            self.grafo[vertice] = {vertice:vertice,"vizinhos": []}
 
-    def adicionar_aresta(self, v1, v2):
+    def adicionar_aresta(self, v1:str, v2:str):
         self.adicionar_vertice(v1)
         self.adicionar_vertice(v2)
-        
-        if v2 not in self.grafo[v1].vizinhos:
-            self.grafo[v1].vizinhos.append(v2)
-        if v1 not in self.grafo[v2].vizinhos:
-            self.grafo[v2].vizinhos.append(v1)
+        if v2 not in self.grafo[v1]["vizinhos"]:
+            self.grafo[v1]["vizinhos"].append(v2)
+        if v1 not in self.grafo[v2]["vizinhos"]:
+            self.grafo[v2]["vizinhos"].append(v1)

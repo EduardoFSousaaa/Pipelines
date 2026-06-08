@@ -29,6 +29,11 @@ class integrantesCelula:
     maquinas:  list = field(default_factory=list[str])
 
 @dataclass
+class PropriedadesVertice:
+    # Inicializa uma lista vazia para cada novo vértice criado
+    vizinhos: list[any] = field(default_factory=list)
+
+@dataclass
 class entrada:        
     qtdmateriaPrima: int = 0
     celulasPossiveis:  list[celula] = field(default_factory=list)
