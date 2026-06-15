@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from array import array
 from typing import List
 from grafo import *
-from tomlkit import datetime
+from datetime import datetime
 import random
 
 @dataclass
@@ -16,6 +16,10 @@ class celula:
     capacidadeDeProducao: int = 50
     tempoDeProducao: tempoDeProducao = field(default_factory= lambda:tempoDeProducao(60,60))
     Ocupada: bool = False
+    start: bool = False
+    
+    def __getitem__(self, chave):
+        return self.celula.get(chave, None)
     
     def ObterListaDeSaidas(self, grafo: Grafo):
         if self.nome in grafo.grafo:
@@ -75,22 +79,26 @@ class entrada:
         ListaDeSaidas = []
         for i in range(entrada.qtdmateriaPrima):
             if i % 10 == 0:
-                print(f"Hora Final para o número: {i}/{entrada.qtdmateriaPrima} unidades processadas: {datetime.datetime.now()}")
+                print(f"Hora Final para o número: {i}/{entrada.qtdmateriaPrima} unidades processadas: {str(datetime.now())}")
             saida = entrada.SortearQualidadeDaPeca()
             ListaDeSaidas.append(saida)
-            print(f"Unidade {i+1}: {saida.name}")
-        Contagem = Saida.ContarTipoDeSaida(ListaDeSaidas)
+            print(f"Peça {i+1}: {saida.name}")
+        return ListaDeSaidas
+        #ListaSaidas = Saida.ContarTipoDeSaida(ListaDeSaidas)
+        #for saida in lstSaidasContadas:
+            
         #dataSaidaLote = datetime.datetime.now()
         #return [Contagem, dataSaidaLote]
-        NovaSaida = SaidaDaCelula()
-        lstSaidas = []
-        for saida in Contagem:
-            saidaDaCelula = SaidaDaCelula(tipoDeSaida=saida,
-                                           qtd=Contagem[saida], 
-                                           destinosPossiveis=[celula.ObterListaDeSaidas(entrada.grafo)],
-                                           dataSaida=str(datetime.datetime.now()))
-            lstSaidas.append(saidaDaCelula)
-        return lstSaidas
+        #NovaSaida = SaidaDaCelula()
+        #lstSaidas = []
+        #lstSaidas = ListaDeSaidas
+        #for saida in Contagem:
+        #    saidaDaCelula = SaidaDaCelula(tipoDeSaida=saida,
+        #                                   qtd=Contagem[saida], 
+        #                                   destinosPossiveis=[celula.ObterListaDeSaidas(entrada.grafo)],
+        #                                   dataSaida=str(datetime.datetime.now()))
+        #    lstSaidas.append(saidaDaCelula)
+        #return ListaSaidas
 @dataclass
 class tempoDeProducao:        
     horahomem: int = 60
@@ -108,7 +116,8 @@ class Saida(enum.Enum):
     Reciclagem = 3
     Default = 0
     
-    def ContarTipoDeSaida(self, listaDeSaidas: List[Saida]):
+    @staticmethod
+    def ContarTipoDeSaida(listaDeSaidas: List):
         contagem = {
             Saida.PecaAcabada: 0,
             Saida.PontasDeEstoque: 0,
@@ -116,8 +125,10 @@ class Saida(enum.Enum):
             Saida.Default: 0
         }
         for saida in listaDeSaidas:
-            contagem[saida] += 1
-        return contagem
+            if saida in contagem:
+                contagem[saida] += 1
+        # Retorna a lista de tuplas (nome, quantidade) dinamicamente
+        return [(saida.name, qtd) for saida, qtd in contagem.items()]
 
 @dataclass
 class SaidaDaCelula():

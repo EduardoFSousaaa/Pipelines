@@ -26,19 +26,26 @@ class Application(Tk):
         self.fontePadrao = ("Arial", "10")
         
         self.barra_topo = Frame(self, bg="#f0f0f0")
-        self.barra_topo.pack(side="top", fill="x", anchor="nw")
+        self.barra_topo.pack(side="left", fill="x", anchor="nw")
         
         self.btnMenu1 = Button(self.barra_topo, bg="violet")
         self.btnMenu1["text"] = "Nova Equipe"
         self.btnMenu1["font"] = ("Calibri", "8")
         self.btnMenu1["width"] = 12
-        self.btnMenu1["command"] = self.abrir_janela 
-        self.btnMenu1.pack(anchor="w", padx=2, pady=0)
+        self.btnMenu1["command"] = self.abrir_janelaEquipes 
+        self.btnMenu1.pack(side=LEFT ,anchor="w",fill="x", padx=2, pady=0)
+
+        self.btnMenu2 = Button(self.barra_topo, bg="violet")
+        self.btnMenu2["text"] = "Processamento de imagem"
+        self.btnMenu2["font"] = ("Calibri", "8")
+        self.btnMenu2["width"] = 12
+        self.btnMenu2["command"] = self.abrir_janelaProcessamentoPipeline 
+        self.btnMenu2.pack(anchor="w",fill="x", padx=2, pady=0)
         
         self.primeiroContainer = Frame(self, bg="blue")
         self.primeiroContainer["pady"] = 20
         self.primeiroContainer["padx"] = 5
-        self.primeiroContainer.pack(side=LEFT, anchor=NW, padx=2, pady=0, fill='x')
+        self.primeiroContainer.pack(side=LEFT, anchor=NW, padx=2, pady=0)
         
         self.SegundoContainer = Frame(self, bg="red")
         self.SegundoContainer["pady"] = 10
@@ -161,7 +168,7 @@ class Application(Tk):
         
         # Atualiza o dicionário mapeado corretamente com chaves string
         self.dados_para_enviar = {"lstcelula": self.lstcelula, "grafo": self.Grafo.grafo,"equipes_cadastradas":self.equipes_cadastradas}
-
+        
     def obterQtdCelulas(self):
         return self.qtd_celulas.get()
 
@@ -174,8 +181,11 @@ class Application(Tk):
         if vertice != "" and celula != "":
             self.Grafo.adicionar_aresta(celula, vertice)
 
-    def abrir_janela(self):
+    def abrir_janelaEquipes(self):
         JanelaEquipes(self, self.dados_para_enviar,self.receber_dados_equipe)
+
+    def abrir_janelaProcessamentoPipeline(self):
+        JanelaProcessamentoDados(self,any,any)
 
     def receber_dados_equipe(self, nome_equipe, celula, operadores, maquinas):
         """Este método é chamado pela JanelaEquipes quando o usuário finaliza"""
@@ -355,3 +365,103 @@ class JanelaEquipes(Toplevel):
     def finalizar_equipe(self):
        """Aproveita a mesma lógica de salvamento do método ao_fechar"""
        self.ao_fechar()
+       
+class JanelaProcessamentoDados(Toplevel):
+    
+    def __init__(self, master, dicionario_objetos,callback_salvar):
+        from PIL import ImageFile
+        from PIL import Image
+        from PIL import Image, ImageTk
+        super().__init__(master)
+        self.title("Montagem de Equipes")
+        self.geometry("1000x800")
+        # Passamos 'self' como o master dos widgets agora!
+        self.fontePadrao = ("Arial", "10")
+
+        self.EntradaConteiner = Frame(self)
+        self.EntradaConteiner["pady"] = 10
+        self.EntradaConteiner.pack(side=LEFT,anchor=W)
+
+        self.EntradaDeMateriais = StringVar(value=50)
+        Label(self.EntradaConteiner,text="Entrada de materias(qtd)",).pack(side="left")
+        Entry(self.EntradaConteiner,textvariable = self.EntradaDeMateriais).pack(side="left")
+        Button(self.EntradaConteiner,text="Processar Entrada", width=15,command=self.btnProcessar).pack(side="left")
+        lblMensagem = Label(self.EntradaConteiner,text="",)
+        
+        
+    def btnProcessar(self):
+        from PIL import ImageFile
+        from PIL import Image
+        from PIL import Image, ImageTk
+
+        self.PrimeiroContainer = Frame(self)
+        self.PrimeiroContainer["pady"] = 10
+        self.PrimeiroContainer.pack(side=LEFT,anchor=W)
+        
+        # 1. Abre a imagem original (substitua pelo nome correto do seu arquivo)
+        imagem_original = Image.open("triangulos.png")
+
+        # 2. Define a altura fixa e a largura de cada bloco
+        altura = 26
+        largura_bloco = 35
+
+        # 3. Faz o recorte de cada triângulo usando as coordenadas (esquerda, topo, direita, baixo)
+        verde = imagem_original.crop((0, 0, largura_bloco, altura))
+        amarelo = imagem_original.crop((largura_bloco, 0, largura_bloco * 2, altura))
+        vermelho = imagem_original.crop((largura_bloco * 2, 0, largura_bloco * 3, altura))
+        
+        verde = ImageTk.PhotoImage(verde)
+        amarelo = ImageTk.PhotoImage(amarelo)
+        vermelho = ImageTk.PhotoImage(vermelho)
+        self.frame_matriz = Frame(self.PrimeiroContainer, bg="lightgray")
+        self.frame_matriz.pack(fill="both") 
+        if int(self.EntradaDeMateriais.get()) > 0:
+            # 3. For duplo para criar a matriz 5x10 (5 linhas e 10 colunas)
+            entradaA= entrada(int(self.EntradaDeMateriais.get()),['a','b','c'],"ProcessoPadrão",{"A": {'A': 'A', 'vizinhos': ['B']}, "B": {'B': 'B', 'vizinhos': ['A', 'C']},"C": {'C': 'C', 'vizinhos': ['B']}})
+            listaDeSaidas= entradaA.processaEmUnicoLote(celula)
+            lstTuplesaidasContadas = Saida.ContarTipoDeSaida(listaDeSaidas)
+            
+            # Converte as divisões para inteiros usando '//'
+            COLUNAS_MATRIZ = 5
+            for i,saida in enumerate(listaDeSaidas):
+                linha = i // COLUNAS_MATRIZ
+                coluna = i % COLUNAS_MATRIZ
+                imagem_definida = None
+
+                if saida == Saida.PecaAcabada:
+                    imagem_definida = verde
+                elif saida == Saida.PontasDeEstoque:
+                    imagem_definida = amarelo
+                elif saida == Saida.Reciclagem:
+                    imagem_definida = vermelho
+
+                if imagem_definida:
+                    # Criamos um único objeto Label genérico
+                    label = Label(self.frame_matriz, image=imagem_definida, bd=0, padx=0, pady=0)
+                    
+                    # Posiciona dinamicamente usando a linha e coluna atuais do loop
+                    label.grid(row=linha, column=coluna)
+                    
+                    # O SEGREDO DA REFERÊNCIA: Salva a imagem escolhida diretamente na propriedade interna do widget criado
+                    label.image = imagem_definida   
+
+            self.SegundoContainer = Frame(self)
+            self.SegundoContainer["pady"] = 10
+            self.SegundoContainer.pack(side="left",anchor="center")
+
+            for tuple in lstTuplesaidasContadas:
+                if tuple[0] == Saida.PecaAcabada.name and tuple[1] > 0:
+                    Label(self.SegundoContainer, image=verde, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
+                    Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+                if tuple[0] == Saida.PontasDeEstoque.name and tuple[1] > 0:
+                    Label(self.SegundoContainer, image=amarelo, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
+                    Label(self.SegundoContainer, text=" = " +str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)                
+                if tuple[0] == Saida.Reciclagem.name and tuple[1] > 0:
+                    Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
+                    Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+        else:
+            self.lblMensagem[Text]="Insira um numero maior que zero"
+            self.lblMensagem.pack(side=LEFT)
+            
+            
+
