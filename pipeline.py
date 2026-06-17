@@ -61,7 +61,14 @@ class Application(Tk):
         self.qtd_celulas = Entry(self.SegundoContainer, textvariable=StringVar(value="10"))
         self.qtd_celulas["width"] = 15
         self.qtd_celulas["font"] = self.fontePadrao
-        self.qtd_celulas.pack(side=BOTTOM, anchor="e", padx=10, pady=10)
+        self.qtd_celulas.pack(side="left", anchor="e", padx=10, pady=10)
+
+        self.btnCaminhosPipeline = Button(self.SegundoContainer, bg="violet")
+        self.btnCaminhosPipeline["text"] = "Criar Caminhos de pipeline"
+        self.btnCaminhosPipeline["font"] = ("Calibri", "8")
+        self.btnCaminhosPipeline["width"] = 12
+        self.btnCaminhosPipeline["command"] = self.ConfigureCaminhos
+        self.btnCaminhosPipeline.pack(anchor="e", padx=50, pady=0)
         
         self.terceiroContainer = Frame(self, bg="black")
         self.terceiroContainer["padx"] = 5
@@ -127,6 +134,14 @@ class Application(Tk):
         self.Grafo = Grafo()
         self.equipes_cadastradas = {}
         self.dados_para_enviar = {"lstcelula": [], "grafo": self.Grafo.grafo,"equipes_cadastradas":self.equipes_cadastradas}
+    
+    def ConfigureCaminhos(self):
+        qtdCelulas = self.obterQtdCelulas()
+        if int(qtdCelulas) == len(self.lstcelula):
+            self.Grafo.caminhosDoPipeline()
+            #teste de apresentacao 
+            self.TextoPipeline.delete("1.0", "end")
+            self.TextoPipeline.insert("end", f"\n Caminho {self.Grafo.caminhosEnd}")
         
     def NovaCelula(self):
         qtdCelulas = self.obterQtdCelulas()

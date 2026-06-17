@@ -16,8 +16,6 @@ class celula:
     capacidadeDeProducao: int = 50
     tempoDeProducao: tempoDeProducao = field(default_factory= lambda:tempoDeProducao(60,60))
     Ocupada: bool = False
-    start: bool = False
-    
     def __getitem__(self, chave):
         return self.celula.get(chave, None)
     
@@ -103,12 +101,6 @@ class entrada:
 class tempoDeProducao:        
     horahomem: int = 60
     horaMaquina: int = 60
-@dataclass
-class Pipeline:
-    id:int
-    Titulo:str
-    tamanho:int = 0
-    grafo: Grafo = field(default_factory = dict())
 
 class Saida(enum.Enum):
     PecaAcabada = 1
