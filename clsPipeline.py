@@ -7,15 +7,17 @@ from grafo import *
 from datetime import datetime
 import random
 
-@dataclass
+@dataclass(repr=False)
 class celula:
     nome: str = ""
     entrada: entrada = None
     integrantes: integrantesCelula = None
-    vizinhos: List[Grafo]= field(default_factory=list)
-    capacidadeDeProducao: int = 50
-    tempoDeProducao: tempoDeProducao = field(default_factory= lambda:tempoDeProducao(60,60))
+    vizinhos: List[Grafo]= field(default_factory=list,repr=False)
+    capacidadeDeProducao: int = field(default_factory=50, repr=False)
+    tempoDeProducao: tempoDeProducao = field(default_factory= lambda:tempoDeProducao(60,60),repr=False)
     Ocupada: bool = False
+    def __repr__(self) -> str:
+        return f"(celula ='{self.nome}')"
     def __getitem__(self, chave):
         return self.celula.get(chave, None)
     
@@ -38,6 +40,7 @@ class PropriedadesVertice:
 @dataclass
 class entrada:        
     qtdmateriaPrima: int = 0
+    celulaAtual: str = ""
     celulasPossiveis:  list[celula] = field(default_factory=list)
     ProcessoDeProducao: str = "Processo Padrão"
     grafo: dict[any, PropriedadesVertice] = field(default_factory=dict)
@@ -72,13 +75,13 @@ class entrada:
             return "Todas as células estão ocupadas no momento. Por favor, aguarde."
         else:  
             return "Sem materia-prima disponível."
-    def processaEmUnicoLote(entrada: entrada, celula: celula):
-        print(f"Processando {entrada.qtdmateriaPrima} unidades de matéria-prima usando o {entrada.ProcessoDeProducao} em um único lote")
+    def processaEmUnicoLote(self):
+        print(f"Processando {self.qtdmateriaPrima} unidades de matéria-prima usando o {self.ProcessoDeProducao} em um único lote")
         ListaDeSaidas = []
-        for i in range(entrada.qtdmateriaPrima):
+        for i in range(self.qtdmateriaPrima):
             if i % 10 == 0:
-                print(f"Hora Final para o número: {i}/{entrada.qtdmateriaPrima} unidades processadas: {str(datetime.now())}")
-            saida = entrada.SortearQualidadeDaPeca()
+                print(f"Hora Final para o número: {i}/{self.qtdmateriaPrima} unidades processadas: {str(datetime.now())}")
+            saida = self.SortearQualidadeDaPeca()
             ListaDeSaidas.append(saida)
             print(f"Peça {i+1}: {saida.name}")
         return ListaDeSaidas
