@@ -11,8 +11,8 @@ class Application(Tk):
         super().__init__() # Inicializa a fiação interna do Tkinter corretamente
         
         # Definições de tamanho e centralização da Janela Principal
-        largura = 800
-        altura = 800
+        largura = 850
+        altura = 850
         largura_tela = self.winfo_screenwidth()
         altura_tela = self.winfo_screenheight()
         
@@ -21,56 +21,129 @@ class Application(Tk):
         
         self.title("Pipeline Manager v1.0")
         self.geometry(f"{largura}x{altura}+{posicao_x}+{posicao_y}")
-        
+        self.minsize(750, 750)
         # Passamos 'self' como o master dos widgets agora!
         self.fontePadrao = ("Arial", "10")
         
-        self.barra_topo = Frame(self, bg="#f0f0f0")
-        self.barra_topo.pack(side="left", fill="x", anchor="nw")
+        # 1. CRIAÇÃO DO CONTAINER PRINCIPAL (Mestre de todos)
+        self.MasterFrame = Frame(self)
+        self.MasterFrame.pack(fill=BOTH, expand=True)
+
+        # 2. CRIAÇÃO DA SCROLLBAR VERTICAL
+        self.ScrollbarJanela = Scrollbar(self.MasterFrame, orient=VERTICAL)
+        self.ScrollbarJanela.pack(side=RIGHT, fill=Y)
+
+        # 3. CRIAÇÃO DO CANVAS (Área rolável)
+        self.CanvasJanela = Canvas(
+            self.MasterFrame, 
+            yscrollcommand=self.ScrollbarJanela.set,
+            highlightthickness=0
+        )
+        self.CanvasJanela.pack(side=LEFT, fill=BOTH, expand=True)
+
+        # Conecta a barra de rolagem ao movimento do Canvas
+        self.ScrollbarJanela.config(command=self.CanvasJanela.yview)
+
+        # 4. O FRAME CONTEÚDO (Onde você vai colocar seus containers e widgets)
+        self.ConteudoJanela = Frame(self.CanvasJanela)
+
+        # Insere o Frame de conteúdo dentro do Canvas
+        self.CanvasWindowID = self.CanvasJanela.create_window(
+            (0, 0), 
+            window=self.ConteudoJanela, 
+            anchor="nw"
+        )
+
+        # 5. CONFIGURAÇÃO DOS EVENTOS DE REDIMENSIONAMENTO
+        # Atualiza a área de rolagem sempre que novos widgets forem adicionados
+        def configurar_scroll(event):
+            self.CanvasJanela.configure(scrollregion=self.CanvasJanela.bbox("all"))
+
+        self.ConteudoJanela.bind("<Configure>", configurar_scroll)
+
+        # Garante que o frame interno tenha a mesma largura do Canvas
+        def configurar_largura(event):
+            self.CanvasJanela.itemconfig(self.CanvasWindowID, width=event.width)
+
+        self.CanvasJanela.bind("<Configure>", configurar_largura)
+
+        # Suporte para Windows e MacOS (Roda do mouse)
+        def _on_mousewheel(event):
+            # No Windows o evento usa .delta, no Linux usa botões específicos
+            self.CanvasJanela.yview_scroll(int(-1*(event.delta/120)), "units")
+
+        # Vincula o scroll do mouse à janela inteira
+        self.CanvasJanela.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        self.barra_topo = Frame(self.ConteudoJanela, bg="#f0f0f0")
+        self.barra_topo.pack(side="top", fill="x", anchor="nw")
         
         self.btnMenu1 = Button(self.barra_topo, bg="violet")
         self.btnMenu1["text"] = "Nova Equipe"
         self.btnMenu1["font"] = ("Calibri", "8")
-        self.btnMenu1["width"] = 12
+        self.btnMenu1["width"] = 20
         self.btnMenu1["command"] = self.abrir_janelaEquipes 
         self.btnMenu1.pack(side=LEFT ,anchor="w",fill="x", padx=2, pady=0)
 
         self.btnMenu2 = Button(self.barra_topo, bg="violet")
         self.btnMenu2["text"] = "Processamento de imagem"
         self.btnMenu2["font"] = ("Calibri", "8")
-        self.btnMenu2["width"] = 12
+        self.btnMenu2["width"] = 20
         self.btnMenu2["command"] = self.abrir_janelaProcessamentoPipeline 
-        self.btnMenu2.pack(anchor="w",fill="x", padx=2, pady=0)
+        self.btnMenu2.pack(side=LEFT ,anchor="w",fill="x", padx=2, pady=0)
         
-        self.primeiroContainer = Frame(self, bg="blue")
+        self.frame_titulo = Frame(self.ConteudoJanela, bg="#f4f4f4")
+        self.frame_titulo.pack(side=TOP, fill=BOTH, expand=False, padx=5, pady=5)
+
+        self.titulo = Label(self.frame_titulo, text="Novo Pipeline", font=self.fontePadrao)
+        self.titulo["font"] = ("Arial", "10", "bold")
+        self.titulo.pack(anchor="center")
+
+        self.frame_conteudo = Frame(self.ConteudoJanela, bg="#f4f4f4")
+        self.frame_conteudo.pack(side=TOP, fill=None, expand=True, padx=10, pady=10)
+
+        self.primeiroContainer = Frame(self.frame_conteudo, bg="red")
         self.primeiroContainer["pady"] = 20
         self.primeiroContainer["padx"] = 5
-        self.primeiroContainer.pack(side=LEFT, anchor=NW, padx=2, pady=0)
+        self.primeiroContainer.pack(side="top",fill="both", anchor=W, padx=2, pady=0)
         
-        self.SegundoContainer = Frame(self, bg="red")
-        self.SegundoContainer["pady"] = 10
-        self.SegundoContainer.pack(anchor=W)
-        
-        self.titulo = Label(self.primeiroContainer, text="Novo Pipeline", font=self.fontePadrao)
-        self.titulo["font"] = ("Arial", "10", "bold")
-        self.titulo.pack(side="left", anchor="w")
-        
-        self.qtdCelulaLabel = Label(self.SegundoContainer, text="Qtd de Células: ", font=self.fontePadrao)
+        self.qtdCelulaLabel = Label(self.primeiroContainer, text="Qtd de Células: ", font=self.fontePadrao)
         self.qtdCelulaLabel.pack(side="left")
         
-        self.qtd_celulas = Entry(self.SegundoContainer, textvariable=StringVar(value="10"))
+        self.qtd_celulas = Entry(self.primeiroContainer, textvariable=StringVar(value="3"))
         self.qtd_celulas["width"] = 15
         self.qtd_celulas["font"] = self.fontePadrao
         self.qtd_celulas.pack(side="left", anchor="e", padx=10, pady=10)
 
-        self.btnCaminhosPipeline = Button(self.SegundoContainer, bg="violet")
+        self.btnCaminhosPipeline = Button(self.primeiroContainer, bg="violet")
         self.btnCaminhosPipeline["text"] = "Criar Caminhos de pipeline"
         self.btnCaminhosPipeline["font"] = ("Calibri", "8")
-        self.btnCaminhosPipeline["width"] = 12
+        self.btnCaminhosPipeline["width"] = 30
         self.btnCaminhosPipeline["command"] = self.ConfigureCaminhos
         self.btnCaminhosPipeline.pack(anchor="e", padx=50, pady=0)
+
+        self.SegundoContainer = Frame(self.frame_conteudo, bg="red")
+        self.SegundoContainer["pady"] = 10
+        self.SegundoContainer.pack(anchor=W,fill="both")
+
+        self.celulaStartLabel = Label(self.SegundoContainer, text="Inicio Pipeline:", font=self.fontePadrao)
+        self.celulaStartLabel.pack(side="left", anchor=E)
         
-        self.terceiroContainer = Frame(self, bg="black")
+        self.celulaStart = Entry(self.SegundoContainer, textvariable=StringVar(value="A"))
+        self.celulaStart["width"] = 15
+        self.celulaStart["font"] = self.fontePadrao
+        self.celulaStart.pack(side="left", anchor=E)
+        
+        self.celulaEndLabel = Label(self.SegundoContainer, text="Final Pipeline:", font=self.fontePadrao)
+        self.celulaEndLabel["width"] = 15
+        self.celulaEndLabel.pack(side="left", anchor=W)
+        
+        self.CelulaEnd = Entry(self.SegundoContainer, textvariable=StringVar(value="B"))
+        self.CelulaEnd["width"] = 15
+        self.CelulaEnd["font"] = self.fontePadrao
+        self.CelulaEnd.pack(side="left", anchor=W)
+        
+        self.terceiroContainer = Frame(self.frame_conteudo, bg="black")
         self.terceiroContainer["padx"] = 5
         self.terceiroContainer["pady"] = 5
         self.terceiroContainer.pack(side="top", anchor="w", padx=0)
@@ -92,9 +165,9 @@ class Application(Tk):
         self.vertice["font"] = self.fontePadrao
         self.vertice.pack(side="left", anchor=W)
         
-        self.quartoContainer = Frame(self, bg="violet")
+        self.quartoContainer = Frame(self.frame_conteudo, bg="violet")
         self.quartoContainer["pady"] = 20
-        self.quartoContainer.pack(side=TOP, anchor="nw")
+        self.quartoContainer.pack(side=TOP,fill="both", anchor="nw")
         
         self.btnNovaCelular = Button(self.terceiroContainer, bg="violet")
         self.btnNovaCelular["text"] = "Nova Célula"
@@ -104,30 +177,30 @@ class Application(Tk):
         self.btnNovaCelular.pack(anchor="e", padx=50, pady=0)
         
         self.mensagemTitulo = Label(self.quartoContainer, text="Mensageiro:", font=self.fontePadrao)
-        self.mensagemTitulo.pack(side="top", anchor=CENTER)
+        self.mensagemTitulo.pack(side="top", fill="both", anchor=CENTER)
         
         self.mensagem = Label(self.quartoContainer, text="", font=self.fontePadrao)
         self.mensagem.pack(side="top")
         
-        self.quintoESQContainer = Frame(self)
+        self.quintoESQContainer = Frame(self.frame_conteudo)
         self.quintoESQContainer["pady"] = 25
         self.quintoESQContainer.pack(side=TOP, anchor="nw")
         
-        self.quintoDIRContainer = Frame(self)
+        self.quintoDIRContainer = Frame(self.frame_conteudo)
         self.quintoDIRContainer["pady"] = 25
         self.quintoDIRContainer.pack(side=LEFT, anchor="ne")
         
         self.CelulasLabel = Label(self.quintoESQContainer, text="Celulas:", font=self.fontePadrao, bg="lightblue")
         self.CelulasLabel.pack(side=LEFT, anchor="nw")
         
-        self.TextoPipeline = Text(self.quintoESQContainer, height=15, width=40)
+        self.TextoPipeline = Text(self.quintoESQContainer, height=20, width=60)
         self.TextoPipeline.pack(side=LEFT)
         
         self.GrafoLabel = Label(self.quintoDIRContainer, text="Grafo:", font=self.fontePadrao, bg="lightblue")
-        self.GrafoLabel.pack(side=LEFT, anchor="ne")
+        self.GrafoLabel.pack(side=LEFT, anchor="ne",expand=TRUE)
         
-        self.TextoGrafo = Text(self.quintoDIRContainer, height=15, width=40)
-        self.TextoGrafo.pack(side=LEFT)
+        self.TextoGrafo = Text(self.quintoDIRContainer, height=20, width=80)
+        self.TextoGrafo.pack(side=LEFT,expand=TRUE)
         
         self.pipeline = {"qtd_celulas": 0, "celulas": []}
         self.lstcelula = []
@@ -136,28 +209,71 @@ class Application(Tk):
         self.dados_para_enviar = {"lstcelula": [], "grafo": self.Grafo.grafo,"equipes_cadastradas":self.equipes_cadastradas}
     
     def ConfigureCaminhos(self):
+        self.mensagem["text"] ="Gerando Caminhos do pipeline..."
+
         qtdCelulas = self.obterQtdCelulas()
-        if int(qtdCelulas) == len(self.lstcelula):
+        self.start = self.celulaStart.get()
+        self.end = self.CelulaEnd.get()
+        if self.start != "":
+            self.Grafo.adicionar_verticeStart(self.start)
+        else: self.mensagem["text"] = "Insira uma celula Para ser a Inicial do Pipeline.";return
+
+        if self.end != "":
+            self.Grafo.adicionar_verticeEnd(self.end)
+        else: self.mensagem["text"] = "Insira uma celula Para ser a Final do Pipeline.";return
+        if len(self.lstcelula) <= int(qtdCelulas):
             self.Grafo.caminhosDoPipeline()
-            #teste de apresentacao 
-            self.TextoPipeline.delete("1.0", "end")
-            self.TextoPipeline.insert("end", f"\n Caminho {self.Grafo.caminhosEnd}")
+            if self.Grafo.caminhosEnd != []:
+                self.TextoPipeline.delete("1.0", "end")
+                self.TextoPipeline.insert("end", f"\n Caminho {self.Grafo.caminhosEnd}")
+                self.caminhosEnd = self.Grafo.caminhosEnd
+            else: self.mensagem["text"] ="sem Caminhos que levam ao Final do Pipeline.";return
+        else:
+            srtCaminhoErro = " Não foi possivel gerar caminho."
+            self.mensagem["text"] ="Mais celulas permitidas pelo pipeline,"+ srtCaminhoErro
+            return
         
+        return "ok"    
     def NovaCelula(self):
         qtdCelulas = self.obterQtdCelulas()
         celula = self.nomeCelula.get()
         vertice = self.vertice.get()
+        start = self.celulaStart.get()
+        end = self.CelulaEnd.get()
+
+        if start != "":
+            self.Grafo.adicionar_verticeStart(start)
+        else: 
+            self.mensagem["text"] = "Insira uma celula Para ser a Inicial do Pipeline."; return
+
+
+        if end != "":
+            self.Grafo.adicionar_verticeEnd(end)
+        else: 
+            self.mensagem["text"] = "Insira uma celula Para ser a Final do Pipeline."; return
+
         if qtdCelulas == "" and not qtdCelulas.isnumeric():
             self.mensagem["text"] = "A quantidade de células é obrigatória. Por favor, preencha o campo com um numero."
-        elif self.pipeline["celulas"].count(celula) >= 1:
+            return
+        if self.pipeline["celulas"].count(celula) >= 1:
             if self.Grafo.grafo.get(celula) is not None:
                 # Modificado para evitar quebras se a estrutura interna do seu grafo variar
                 self.addVertice(celula, vertice)
                 self.mensagem["text"] = "Vértice processado na célula!"
         elif int(qtdCelulas) + 1 <= len(self.lstcelula) + 1 and celula not in ("0", 0, ""):
             self.mensagem["text"] = "A quantidade de células já foi atingida. Não é possível adicionar mais células."
-        elif qtdCelulas != "" and (celula != "" or vertice != "" ):
-            self.lstcelula.append(celula)
+            return
+        if qtdCelulas != "" and (celula != "" or vertice != "" ):
+            if celula not in self.lstcelula:
+                if int(qtdCelulas)>= len(self.lstcelula) + 1 and celula not in ("0", 0, ""):
+                    self.lstcelula.append(celula)
+                else: 
+                    self.mensagem["text"] = "A quantidade de células já foi atingida. Não é possível adicionar mais células."; return
+            if vertice not in self.lstcelula:
+                if int(qtdCelulas) >= len(self.lstcelula) + 1 and vertice not in ("0", 0, ""):
+                    self.lstcelula.append(vertice)
+                else: 
+                    self.mensagem["text"] = "A quantidade de células já foi atingida. Não é possível adicionar mais células."; return
             self.pipeline["qtd_celulas"] = qtdCelulas
             self.addVertice(celula, vertice)
             strmensagem = "Nova célula criada com sucesso!"
@@ -171,18 +287,15 @@ class Application(Tk):
             if self.pipeline["celulas"].count(self.vertice.get()) < 1:
                 self.pipeline["celulas"].append(self.vertice.get())
         else:
-            self.mensagem["text"] = "Erro na Criação da célula. Verifique os campos e tente novamente."
+            self.mensagem["text"] = "Erro na Criação da célula. Verifique os campos e tente novamente.";return
             
         self.TextoPipeline.delete("1.0", "end")
-        self.TextoPipeline.insert("end", f"\n Quantidade de Células: {self.pipeline['qtd_celulas']}")
+        self.TextoPipeline.insert("end", f"\n Maximo de celulas do pipeline: {self.pipeline['qtd_celulas']}")
         self.TextoPipeline.insert("end", f"\n Células: {', '.join(self.pipeline['celulas'])}")
         
         self.TextoGrafo.delete("1.0", "end")
         #self.TextoGrafo.insert("end",self.pipeline['celulas'])
         self.TextoGrafo.insert("end", f"\n Grafo: {f'\n'.join(f'{key[0]}: {key[1]}' for key in self.Grafo.grafo.items())}")
-        
-        # Atualiza o dicionário mapeado corretamente com chaves string
-        self.dados_para_enviar = {"lstcelula": self.lstcelula, "grafo": self.Grafo.grafo,"equipes_cadastradas":self.equipes_cadastradas}
         
     def obterQtdCelulas(self):
         return self.qtd_celulas.get()
@@ -197,11 +310,18 @@ class Application(Tk):
             self.Grafo.adicionar_aresta(celula, vertice)
 
     def abrir_janelaEquipes(self):
+        # Atualiza o dicionário mapeado corretamente com chaves string
+        self.dados_para_enviar = {"lstcelula": self.lstcelula, "grafo": self.Grafo.grafo,"equipes_cadastradas":self.equipes_cadastradas}
         JanelaEquipes(self, self.dados_para_enviar,self.receber_dados_equipe)
 
     def abrir_janelaProcessamentoPipeline(self):
-        JanelaProcessamentoDados(self,any,any)
 
+        strRetorno = self.ConfigureCaminhos()
+        if strRetorno == "ok":
+            dictObjetos = {"grafo":self.Grafo,"START":self.start,"END":self.end,"CaminhoPipeline":self.caminhosEnd[0] }
+            JanelaProcessamentoDados(self,dictObjetos,any)
+        else:
+            self.mensagem["text"] = "Não foi possivel gerar caminho"
     def receber_dados_equipe(self, nome_equipe, celula, operadores, maquinas):
         """Este método é chamado pela JanelaEquipes quando o usuário finaliza"""
         self.mensagem["text"] = f"Janela Principal recebeu: {nome_equipe} para a célula {celula}"
@@ -382,40 +502,140 @@ class JanelaEquipes(Toplevel):
        self.ao_fechar()
        
 class JanelaProcessamentoDados(Toplevel):
-    
     def __init__(self, master, dicionario_objetos,callback_salvar):
         from PIL import ImageFile
         from PIL import Image
         from PIL import Image, ImageTk
+
         super().__init__(master)
         self.title("Montagem de Equipes")
         self.geometry("1000x800")
         # Passamos 'self' como o master dos widgets agora!
         self.fontePadrao = ("Arial", "10")
 
+        self.start = dicionario_objetos["START"]
+        self.end = dicionario_objetos["END"]
+        self.CaminhoDoPiPeLine = list(dicionario_objetos["CaminhoPipeline"])
         self.EntradaConteiner = Frame(self)
         self.EntradaConteiner["pady"] = 10
-        self.EntradaConteiner.pack(side=LEFT,anchor=W)
+        self.EntradaConteiner.pack(side=TOP,anchor=NW,fill="both")
+
+        self.SegundoContainer = Frame(self.EntradaConteiner, bg="red")
+        self.SegundoContainer["pady"] = 10
+        self.SegundoContainer.pack(anchor=W,fill="both")
+
+        self.celulaStartLabel = Label(self.SegundoContainer, text="Inicio Pipeline: " + self.start, font=self.fontePadrao)
+        self.celulaStartLabel.pack(side="left", anchor=W)
+        
+        self.celulaEndLabel = Label(self.SegundoContainer, text="Final Pipeline: " + self.end, font=self.fontePadrao)
+        self.celulaEndLabel["width"] = 15
+        self.celulaEndLabel.pack(side="left", anchor=W)
+
+        self.CaminhoLabel = Label(self.SegundoContainer, text=f"Caminho Pipeline: [{ ",".join(str(item) for item in self.CaminhoDoPiPeLine)}]", font=self.fontePadrao)
+        self.CaminhoLabel["width"] = 20
+        self.CaminhoLabel.pack(side="left", anchor=W)
 
         self.EntradaDeMateriais = StringVar(value=50)
         Label(self.EntradaConteiner,text="Entrada de materias(qtd)",).pack(side="left")
         Entry(self.EntradaConteiner,textvariable = self.EntradaDeMateriais).pack(side="left")
-        Button(self.EntradaConteiner,text="Processar Entrada", width=15,command=self.btnProcessar).pack(side="left")
+        Button(self.EntradaConteiner,text="Processar Entrada", width=15,command=self.btnProcessar).pack(side="bottom")
         lblMensagem = Label(self.EntradaConteiner,text="",)
-        
-        
+
+        self.ProcessarDadosConteiner = Frame(self.EntradaConteiner)
+        self.ProcessarDadosConteiner["pady"] = 10
+        self.ProcessarDadosConteiner.pack(side="bottom",anchor=W)
+        #Se ja houve Processamento de dados
+        self.BoolProcessamentoDedados = False
+
     def btnProcessar(self):
+        self.dictParaProximaEntrada = {"ProximaCelulaAtual" : "",
+                                  "listaDeSaidas":[],
+                                  "lstTuplesaidasContadas":{()},
+                                  "ProximaQtdEntradaMaterial":0
+                                  }
+        start=self.start
+        caminho = self.CaminhoDoPiPeLine
+        end=self.end
+        boolProUltSaida=False
+        self.GerarNovaEntradaMateria(int(self.EntradaDeMateriais.get()),True)
+        while(boolProUltSaida==False):
+            boolProUltSaida=self.DesenharSaidasDoProcesso(self.listaDeSaidas,self.lstTuplesaidasContadas)
+            self.GerarNovaEntradaMateria(int(self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"]),False)
+        
+        
+    def GerarNovaEntradaMateria(self,qtdMaterialEntrada:int,PrimeiraEntrada:bool):
+        if qtdMaterialEntrada > 0:
+            # 3. For duplo para criar a matriz 5x10 (5 linhas e 10 colunas)
+            grafo = {"A": {'A': 'A', 'vizinhos': ['B']}, "B": {'B': 'B', 'vizinhos': ['A', 'C']},"C": {'C': 'C', 'vizinhos': ['B']}}
+            if PrimeiraEntrada==True:
+                entradaA = entrada(int(self.EntradaDeMateriais.get()),str.upper(self.start),['B','C'],"ProcessoPadrão",grafo)
+                self.listaDeSaidas = entradaA.processaEmUnicoLote()
+                self.lstTuplesaidasContadas = Saida.ContarTipoDeSaida(self.listaDeSaidas)
+                if entradaA.celulaAtual != self.end:
+                    for i,celula in enumerate(self.CaminhoDoPiPeLine):
+                        if entradaA.celulaAtual == celula:
+                            self.ProximaSaida = self.CaminhoDoPiPeLine[i+1]
+                
+                #proxima entrada de dados com a primeira saida
+                for tuple in self.lstTuplesaidasContadas:
+                    if str(tuple[0]) == Saida.PecaAcabada.name:
+                        self.qtdNovaEntrada = int(tuple[1])
+                        break
+                self.dictParaProximaEntrada["listaDeSaidas"] = self.listaDeSaidas
+                self.dictParaProximaEntrada["lstTuplesaidasContadas"] = self.lstTuplesaidasContadas
+                self.dictParaProximaEntrada["ProximaCelulaAtual"] = self.ProximaSaida
+                self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] = self.qtdNovaEntrada
+            else:
+                entradaB = entrada(self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] ,
+                                   self.ProximaSaida,['C'],
+                                   "ProcessoPadrão",
+                                   grafo)
+                self.listaDeSaidas = entradaB.processaEmUnicoLote()
+                self.lstTuplesaidasContadas = Saida.ContarTipoDeSaida(self.listaDeSaidas)
+                if entradaB.celulaAtual != self.end:
+                    for i,celula in enumerate(self.CaminhoDoPiPeLine):
+                        if entradaB.celulaAtual == celula:
+                            self.ProximaSaida = self.CaminhoDoPiPeLine[i+1]
+
+                 #proxima entrada de dados com a primeira saida
+                for tuple in self.lstTuplesaidasContadas:
+                    if str(tuple[0]) == Saida.PecaAcabada.name:
+                        self.qtdNovaEntrada = int(tuple[1])
+                        break
+                self.dictParaProximaEntrada["listaDeSaidas"] = self.listaDeSaidas
+                self.dictParaProximaEntrada["lstTuplesaidasContadas"] = self.lstTuplesaidasContadas
+                self.dictParaProximaEntrada["ProximaCelulaAtual"] = self.ProximaSaida
+                self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] = self.qtdNovaEntrada
+        else:
+            self.lblMensagem[Text]="Insira um numero maior que zero"
+            self.lblMensagem.pack(side=LEFT)
+
+    def DesenharSaidasDoProcesso(self,listaDeSaidas,lstTuplesaidasContadas):
         from PIL import ImageFile
         from PIL import Image
         from PIL import Image, ImageTk
 
-        self.PrimeiroContainer = Frame(self)
+        self.PrimeiroContainer = Frame(self.ProcessarDadosConteiner)
         self.PrimeiroContainer["pady"] = 10
-        self.PrimeiroContainer.pack(side=LEFT,anchor=W)
-        
+        self.PrimeiroContainer.pack(side=LEFT,anchor="w")
+
+        self.frame_matriz = Frame(self.PrimeiroContainer, bg="lightgray")
+        self.frame_matriz.pack(fill="both") 
+        #Se ja houve processamento coloca a seta e é importante se pega o titulo da celula start ou da proxima
+        if self.BoolProcessamentoDedados == True:
+            self.SetaContainer = Frame(self.PrimeiroContainer)
+            self.SetaContainer["pady"] = 10
+            self.SetaContainer.pack(side=LEFT,anchor="w")
+            SetaDireita = Image.open("setaDireita.png")
+            setaDir = ImageTk.PhotoImage(SetaDireita)
+            Label(self.SetaContainer, image=setaDir, padx=5, pady=5).pack(side=LEFT,anchor="center")
+        if self.BoolProcessamentoDedados == True:
+            label = Label(self.PrimeiroContainer, text=self.start, padx=0, pady=0).pack(side="top",anchor="center")
+        else:
+            label = Label(self.PrimeiroContainer, text=self.dictParaProximaEntrada["ProximaCelulaAtual"], padx=0, pady=0).pack(side="top",anchor="center")
         # 1. Abre a imagem original (substitua pelo nome correto do seu arquivo)
         imagem_original = Image.open("triangulos.png")
-
+        
         # 2. Define a altura fixa e a largura de cada bloco
         altura = 26
         largura_bloco = 35
@@ -428,55 +648,45 @@ class JanelaProcessamentoDados(Toplevel):
         verde = ImageTk.PhotoImage(verde)
         amarelo = ImageTk.PhotoImage(amarelo)
         vermelho = ImageTk.PhotoImage(vermelho)
-        self.frame_matriz = Frame(self.PrimeiroContainer, bg="lightgray")
-        self.frame_matriz.pack(fill="both") 
-        if int(self.EntradaDeMateriais.get()) > 0:
-            # 3. For duplo para criar a matriz 5x10 (5 linhas e 10 colunas)
-            entradaA= entrada(int(self.EntradaDeMateriais.get()),['a','b','c'],"ProcessoPadrão",{"A": {'A': 'A', 'vizinhos': ['B']}, "B": {'B': 'B', 'vizinhos': ['A', 'C']},"C": {'C': 'C', 'vizinhos': ['B']}})
-            listaDeSaidas= entradaA.processaEmUnicoLote(celula)
-            lstTuplesaidasContadas = Saida.ContarTipoDeSaida(listaDeSaidas)
-            
-            # Converte as divisões para inteiros usando '//'
-            COLUNAS_MATRIZ = 5
-            for i,saida in enumerate(listaDeSaidas):
-                linha = i // COLUNAS_MATRIZ
-                coluna = i % COLUNAS_MATRIZ
-                imagem_definida = None
 
-                if saida == Saida.PecaAcabada:
-                    imagem_definida = verde
-                elif saida == Saida.PontasDeEstoque:
-                    imagem_definida = amarelo
-                elif saida == Saida.Reciclagem:
-                    imagem_definida = vermelho
+        # Converte as divisões para inteiros usando '//'
+        COLUNAS_MATRIZ = 5
+        for i,saida in enumerate(listaDeSaidas):
+            linha = i // COLUNAS_MATRIZ
+            coluna = i % COLUNAS_MATRIZ
+            imagem_definida = None
 
-                if imagem_definida:
-                    # Criamos um único objeto Label genérico
-                    label = Label(self.frame_matriz, image=imagem_definida, bd=0, padx=0, pady=0)
-                    
-                    # Posiciona dinamicamente usando a linha e coluna atuais do loop
-                    label.grid(row=linha, column=coluna)
-                    
-                    # O SEGREDO DA REFERÊNCIA: Salva a imagem escolhida diretamente na propriedade interna do widget criado
-                    label.image = imagem_definida   
+            if saida == Saida.PecaAcabada:
+                imagem_definida = verde
+            elif saida == Saida.PontasDeEstoque:
+                imagem_definida = amarelo
+            elif saida == Saida.Reciclagem:
+                imagem_definida = vermelho
 
-            self.SegundoContainer = Frame(self)
-            self.SegundoContainer["pady"] = 10
-            self.SegundoContainer.pack(side="left",anchor="center")
+            if imagem_definida:
+                # Criamos um único objeto Label genérico
+                label = Label(self.frame_matriz, image=imagem_definida, bd=0, padx=0, pady=0)
+                
+                # Posiciona dinamicamente usando a linha e coluna atuais do loop
+                label.grid(row=linha, column=coluna)
+                
+                # O SEGREDO DA REFERÊNCIA: Salva a imagem escolhida diretamente na propriedade interna do widget criado
+                label.image = imagem_definida   
 
-            for tuple in lstTuplesaidasContadas:
-                if tuple[0] == Saida.PecaAcabada.name and tuple[1] > 0:
-                    Label(self.SegundoContainer, image=verde, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
-                    Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
-                if tuple[0] == Saida.PontasDeEstoque.name and tuple[1] > 0:
-                    Label(self.SegundoContainer, image=amarelo, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
-                    Label(self.SegundoContainer, text=" = " +str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)                
-                if tuple[0] == Saida.Reciclagem.name and tuple[1] > 0:
-                    Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
-                    Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
-        else:
-            self.lblMensagem[Text]="Insira um numero maior que zero"
-            self.lblMensagem.pack(side=LEFT)
-            
-            
+        self.SegundoContainer = Frame(self.PrimeiroContainer)
+        self.SegundoContainer["pady"] = 10
+        self.SegundoContainer.pack(side="left",anchor="s")
 
+        for tuple in lstTuplesaidasContadas:
+            if tuple[0] == Saida.PecaAcabada.name and tuple[1] > 0:
+                Label(self.SegundoContainer, image=verde, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
+                Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+            if tuple[0] == Saida.PontasDeEstoque.name and tuple[1] > 0:
+                Label(self.SegundoContainer, image=amarelo, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
+                Label(self.SegundoContainer, text=" = " +str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)                
+            if tuple[0] == Saida.Reciclagem.name and tuple[1] > 0:
+                Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
+                Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+        self.BoolProcessamentoDedados = True
+        if self.end == self.dictParaProximaEntrada["ProximaCelulaAtual"] or self.end == self.start:
+            return True

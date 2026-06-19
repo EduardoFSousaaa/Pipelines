@@ -5,6 +5,7 @@ from clsPipeline import celula
 class Grafo:
     # O dict agora mapeia o nome do vértice para a classe de propriedades
     grafo: dict[any] = field(default_factory=dict)
+
     def __init__(self):
         self.grafo = {"lst_celulas":[],"START":"","END":""} # Seu dicionário interno
 
@@ -16,19 +17,20 @@ class Grafo:
             self.grafo["START"] = vertice
             self.grafo["END"] = vertice
         if vertice not in self.grafo:
-            self.grafo[vertice] = {"celula":celula(vertice,None,None,{},50,(60,60),False),"vizinhos": [],"Saida":[]}
+            self.grafo[vertice] = {"celula:":celula(vertice,None,None,{},50,(60,60),False),"vizinhos" : [],"saida":[]}
             self.grafo["lst_celulas"].append(vertice)
     def adicionar_aresta(self, v1:str, v2:str):
         self.adicionar_vertice(v1)
         self.adicionar_vertice(v2)
         if v2 not in self.grafo[v1]["vizinhos"]:
-            self.grafo[v1]["Saida"].append((v1,v2))
+            self.grafo[v1]["saida"].append((v1,v2))
             #self.grafo[v1]["celula"].append(celula.vizinhos(v2))
             self.grafo[v1]["vizinhos"].append(v2)
         if v1 not in self.grafo[v2]["vizinhos"]:
             self.grafo[v2]["vizinhos"].append(v1)
             #self.grafo[v2]["celula"].append(celula.vizinhos(v1))
-        self.adicionar_verticeEnd(v2)
+    def adicionar_verticeStart(self,vStart:str):
+        self.grafo["START"] = vStart
     def adicionar_verticeEnd(self,vEnd:str):
         self.grafo["END"] = vEnd
 
@@ -40,14 +42,14 @@ class Grafo:
         caminhoRamos = []
         caminhoPercorrido = []
         #Se o celula Inicial  for a mesma que a final
-        if celulaSTART!="" and celulaEND!= "" and celulaSTART == celulaEND:
-            self.caminhosEnd.append(("CaminhoEnd",(celulaSTART,celulaEND)))
+        if celulaSTART !="" and celulaEND != "" and celulaSTART == celulaEND:
+            self.caminhosEnd.append((celulaSTART,celulaEND))
             return 
         
         ##A logica de entradas anteriores: pode usar esse bloco alterando a saida[1] que o destino para procura a origem saida[0] que vai da na celula
         #Caminhos ramos que saem do inicio e vao para o proximo ponto
         for celula in self.grafo["lst_celulas"]:
-            for saida in self.grafo[celulaSTART]["Saida"]:
+            for saida in self.grafo[celulaSTART]["saida"]:
                 if saida[1] == celula:
                     caminhoRamos.append(celula)
         caminhoPercorrido.append(celulaSTART)
@@ -82,7 +84,8 @@ class Grafo:
         for CaminhosOrigem in NovosCaminhos:
             CaminhoPEnd = self.verificaSaidasSevaiEND(CaminhosOrigem)
             if CaminhoPEnd != []:
-                caminhoPercorrido.append(CaminhoPEnd)
+                caminhoPercorrido.append(CaminhoPEnd[0])
+                caminhoPercorrido.append(CaminhoPEnd[1])
                 self.montarCaminhoPercorrido(caminhoPercorrido)              
 
     def montarCaminhoPercorrido(self,caminhoPercorrido:list):
@@ -93,19 +96,20 @@ class Grafo:
                 self.caminhosEnd.append((passos,caminhoPercorrido[index+1]))
                 #Se é o passo final:
                 # do ultimo passo Percorrido ao passo final que é o atual do caminho
-            else: self.caminhosEnd.append((caminhoPercorrido[index-1],passos))
-    
+            else: return
+                #self.caminhosEnd.append((caminhoPercorrido[index-1],passos))
+        
     def verificaSaidas(self,RamoDeVerificacao:str):
         caminhoRamos = []
         for celula in self.grafo["lst_celulas"]:
-            for saida in self.grafo[RamoDeVerificacao]["Saida"]:
+            for saida in self.grafo[RamoDeVerificacao]["saida"]:
                 if saida[1] == celula:
                     caminhoRamos.append(celula)
         return caminhoRamos
     
     def verificaSaidasSevaiEND(self,RamoDeVerificacao:str):
         caminhoPercorrido = []
-        for saida in self.grafo[RamoDeVerificacao]["Saida"]:
+        for saida in self.grafo[RamoDeVerificacao]["saida"]:
             if saida[1] == self.grafo["END"]:
                 caminhoPercorrido.append(RamoDeVerificacao)
                 caminhoPercorrido.append(saida[1])
