@@ -42,7 +42,7 @@ class Application(Tk):
         self.CanvasJanela.pack(side=LEFT, fill=BOTH, expand=True)
 
         # Conecta a barra de rolagem ao movimento do Canvas
-        self.ScrollbarJanela.config(command=self.CanvasJanela.yview)
+        self.ScrollbarJanela.config(command=self.CanvasJanela.xview)
 
         # 4. O FRAME CONTEÚDO (Onde você vai colocar seus containers e widgets)
         self.ConteudoJanela = Frame(self.CanvasJanela)
@@ -70,7 +70,7 @@ class Application(Tk):
         # Suporte para Windows e MacOS (Roda do mouse)
         def _on_mousewheel(event):
             # No Windows o evento usa .delta, no Linux usa botões específicos
-            self.CanvasJanela.yview_scroll(int(-1*(event.delta/120)), "units")
+            self.CanvasJanela.xview_scroll(int(-1*(event.delta/120)), "units")
 
         # Vincula o scroll do mouse à janela inteira
         self.CanvasJanela.bind_all("<MouseWheel>", _on_mousewheel)
@@ -318,7 +318,7 @@ class Application(Tk):
 
         strRetorno = self.ConfigureCaminhos()
         if strRetorno == "ok":
-            dictObjetos = {"grafo":self.Grafo,"START":self.start,"END":self.end,"CaminhoPipeline":self.caminhosEnd[0] }
+            dictObjetos = {"grafo":self.Grafo,"START":self.start,"END":self.end,"CaminhoPipeline":self.caminhosEnd }
             JanelaProcessamentoDados(self,dictObjetos,any)
         else:
             self.mensagem["text"] = "Não foi possivel gerar caminho"
@@ -508,7 +508,7 @@ class JanelaProcessamentoDados(Toplevel):
         from PIL import Image, ImageTk
 
         super().__init__(master)
-        self.title("Montagem de Equipes")
+        self.title("Processamento de dados")
         self.geometry("1000x800")
         # Passamos 'self' como o master dos widgets agora!
         self.fontePadrao = ("Arial", "10")
@@ -532,14 +532,58 @@ class JanelaProcessamentoDados(Toplevel):
         self.celulaEndLabel.pack(side="left", anchor=W)
 
         self.CaminhoLabel = Label(self.SegundoContainer, text=f"Caminho Pipeline: [{ ",".join(str(item) for item in self.CaminhoDoPiPeLine)}]", font=self.fontePadrao)
-        self.CaminhoLabel["width"] = 20
-        self.CaminhoLabel.pack(side="left", anchor=W)
+        self.CaminhoLabel["width"] = 100
+        self.CaminhoLabel.pack(side="left", fill=BOTH, anchor=W)
 
         self.EntradaDeMateriais = StringVar(value=50)
         Label(self.EntradaConteiner,text="Entrada de materias(qtd)",).pack(side="left")
         Entry(self.EntradaConteiner,textvariable = self.EntradaDeMateriais).pack(side="left")
         Button(self.EntradaConteiner,text="Processar Entrada", width=15,command=self.btnProcessar).pack(side="bottom")
         lblMensagem = Label(self.EntradaConteiner,text="",)
+
+        # 1. CRIAÇÃO DO CONTAINER PRINCIPAL (Mestre de todos)
+        self.MasterFrame = Frame(self)
+        self.MasterFrame.pack(fill=BOTH, expand=True)
+
+        # 2. CRIAÇÃO DA SCROLLBAR VERTICAL
+        self.ScrollbarJanela = Scrollbar(self.MasterFrame, orient="horizontal")
+        self.ScrollbarJanela.pack(side="bottom", fill="x")
+
+        # 3. CRIAÇÃO DO CANVAS (Área rolável)
+        self.CanvasJanela = Canvas(
+            self.MasterFrame, 
+            xscrollcommand=self.ScrollbarJanela.set,
+            highlightthickness=0
+        )
+        self.CanvasJanela.pack(side=LEFT, fill=BOTH, expand=True)
+
+        # Conecta a barra de rolagem ao movimento do Canvas
+        self.ScrollbarJanela.config(command=self.CanvasJanela.yview)
+
+        # 4. O FRAME CONTEÚDO (Onde você vai colocar seus containers e widgets)
+        self.ConteudoJanela = Frame(self.CanvasJanela)
+
+        # Insere o Frame de conteúdo dentro do Canvas
+        self.CanvasWindowID = self.CanvasJanela.create_window(
+            (0, 0), 
+            window=self.ConteudoJanela, 
+            anchor="nw"
+        )
+
+        # 5. CONFIGURAÇÃO DOS EVENTOS DE REDIMENSIONAMENTO
+        # Atualiza a área de rolagem sempre que novos widgets forem adicionados
+        def configurar_scroll(event):
+            self.CanvasJanela.configure(scrollregion=self.CanvasJanela.bbox("all"))
+
+        self.ConteudoJanela.bind("<Configure>", configurar_scroll)
+
+        # Suporte para Windows e MacOS (Roda do mouse)
+        def _on_mousewheel(event):
+            # No Windows o evento usa .delta, no Linux usa botões específicos
+            self.CanvasJanela.xview_scroll(int(-1*(event.delta/120)), "units")
+
+        # Vincula o scroll do mouse à janela inteira
+        self.CanvasJanela.bind_all("<MouseWheel>", _on_mousewheel)
 
         self.ProcessarDadosConteiner = Frame(self.EntradaConteiner)
         self.ProcessarDadosConteiner["pady"] = 10
@@ -573,8 +617,8 @@ class JanelaProcessamentoDados(Toplevel):
                 self.lstTuplesaidasContadas = Saida.ContarTipoDeSaida(self.listaDeSaidas)
                 if entradaA.celulaAtual != self.end:
                     for i,celula in enumerate(self.CaminhoDoPiPeLine):
-                        if entradaA.celulaAtual == celula:
-                            self.ProximaSaida = self.CaminhoDoPiPeLine[i+1]
+                        if entradaA.celulaAtual == celula[0]:
+                            self.ProximaSaida = celula[1]
                 
                 #proxima entrada de dados com a primeira saida
                 for tuple in self.lstTuplesaidasContadas:
@@ -594,8 +638,8 @@ class JanelaProcessamentoDados(Toplevel):
                 self.lstTuplesaidasContadas = Saida.ContarTipoDeSaida(self.listaDeSaidas)
                 if entradaB.celulaAtual != self.end:
                     for i,celula in enumerate(self.CaminhoDoPiPeLine):
-                        if entradaB.celulaAtual == celula:
-                            self.ProximaSaida = self.CaminhoDoPiPeLine[i+1]
+                        if entradaB.celulaAtual == celula[0]:
+                            self.ProximaSaida = celula[1]
 
                  #proxima entrada de dados com a primeira saida
                 for tuple in self.lstTuplesaidasContadas:
@@ -615,7 +659,7 @@ class JanelaProcessamentoDados(Toplevel):
         from PIL import Image
         from PIL import Image, ImageTk
 
-        self.PrimeiroContainer = Frame(self.ProcessarDadosConteiner)
+        self.PrimeiroContainer = Frame(self.ConteudoJanela)
         self.PrimeiroContainer["pady"] = 10
         self.PrimeiroContainer.pack(side=LEFT,anchor="w")
 
@@ -623,7 +667,7 @@ class JanelaProcessamentoDados(Toplevel):
         self.frame_matriz.pack(fill="both") 
         #Se ja houve processamento coloca a seta e é importante se pega o titulo da celula start ou da proxima
         if self.BoolProcessamentoDedados == True:
-            self.SetaContainer = Frame(self.PrimeiroContainer)
+            self.SetaContainer = Frame(self.ConteudoJanela)
             self.SetaContainer["pady"] = 10
             self.SetaContainer.pack(side=LEFT,anchor="w")
             SetaDireita = Image.open("setaDireita.png")
@@ -673,7 +717,7 @@ class JanelaProcessamentoDados(Toplevel):
                 # O SEGREDO DA REFERÊNCIA: Salva a imagem escolhida diretamente na propriedade interna do widget criado
                 label.image = imagem_definida   
 
-        self.SegundoContainer = Frame(self.PrimeiroContainer)
+        self.SegundoContainer = Frame(self.ConteudoJanela)
         self.SegundoContainer["pady"] = 10
         self.SegundoContainer.pack(side="left",anchor="s")
 
@@ -687,6 +731,9 @@ class JanelaProcessamentoDados(Toplevel):
             if tuple[0] == Saida.Reciclagem.name and tuple[1] > 0:
                 Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
                 Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
-        self.BoolProcessamentoDedados = True
+        # Adicione isso na última linha da função:
+        self.ConteudoJanela.update_idletasks()
+        self.CanvasJanela.configure(scrollregion=self.CanvasJanela.bbox("all"))
         if self.end == self.dictParaProximaEntrada["ProximaCelulaAtual"] or self.end == self.start:
-            return True
+            return True 
+        else: return FALSE
