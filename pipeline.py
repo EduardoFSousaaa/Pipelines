@@ -372,14 +372,14 @@ class JanelaEquipes(Toplevel):
             if self.DictEquipes_cadastradas!={}:
                 for eq, dados in self.DictEquipes_cadastradas.items():
                     self.texto_formatado = f"Equipe: {eq}\n"
-                    self.texto_formatado += f"  └─ Célula: {dados['celula']}\n"
-                    self.texto_formatado += f"  └─ Operadores: {', '.join(dados['operadores'])}\n"
-                    self.texto_formatado += f"  └─ Máquinas: {', '.join(dados['maquinas'])}\n"
+                    self.texto_formatado += f"  - Célula: {dados['celula']}\n"
+                    self.texto_formatado += f"  - Operadores: {', '.join(dados['operadores'])}\n"
+                    self.texto_formatado += f"  - Máquinas: {', '.join(dados['maquinas'])}\n"
                     self.texto_formatado += "-----------------------------\n"
             else: self.texto_formatado = str(dicionario_objetos)
             # Inserindo o texto formatado no final do componente
-            self.equipesCadastradas.insert(END, self.texto_formatado)
-            self.equipesCadastradas.pack(side="left", anchor="w")
+            self.equipesCadastradas.insert(END, str(self.texto_formatado))
+            self.equipesCadastradas.pack(side="left",fill="both",expand=True, anchor="w")
 
             lbl2 = Label(self, text="Selecione uma Célula no Pipeline:", font=("Arial", 11, "bold"))
             lbl2.pack(anchor="w", padx=20, pady=5)
@@ -731,6 +731,20 @@ class JanelaProcessamentoDados(Toplevel):
             if tuple[0] == Saida.Reciclagem.name and tuple[1] > 0:
                 Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
                 Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+        
+        self.TerceiroContainer = Frame(self.SegundoContainer)
+        self.TerceiroContainer["pady"] = 10
+        self.TerceiroContainer.pack(side="bottom",anchor="sw")
+
+        nomeEquipe = "Equipe X"
+        integrantesCelula = {"Operadores": ["A", "B", "C"], "Máquinas": ["M1", "M2"]}
+        texto_equipe = f"Equipe {nomeEquipe}, Integrantes: {', '.join(integrantesCelula['Operadores'])}, maquinas: {', '.join(integrantesCelula['Máquinas'])}"
+        # --- ÁREA DA EQUIPE (ABAIXO DO BLOCO) ---
+        # O Label contendo as informações da equipe fica preso na mesma coluna, logo abaixo
+        #line 744
+        #lbl_equipe = Label(self.SegundoContainer, text=texto_equipe, font=self.fontePadrao, justify="left", anchor="n")
+        #lbl_equipe.pack(side="bottom", fill="x")
+
         # Adicione isso na última linha da função:
         self.ConteudoJanela.update_idletasks()
         self.CanvasJanela.configure(scrollregion=self.CanvasJanela.bbox("all"))
