@@ -4,8 +4,9 @@ from tkinter import ttk, Frame
 # pois a importação abaixo permanece necessária:
 from grafo import * 
 from clsPipeline import *
+from copy import deepcopy
 
-# 1. Fazendo a Application herdar corretamente de tk.Tk
+# aplicação, tela Principal
 class Application(Tk): 
     def __init__(self):
         super().__init__() # Inicializa a fiação interna do Tkinter corretamente
@@ -42,7 +43,7 @@ class Application(Tk):
         self.CanvasJanela.pack(side=LEFT, fill=BOTH, expand=True)
 
         # Conecta a barra de rolagem ao movimento do Canvas
-        self.ScrollbarJanela.config(command=self.CanvasJanela.xview)
+        self.ScrollbarJanela.config(command=self.CanvasJanela.yview)
 
         # 4. O FRAME CONTEÚDO (Onde você vai colocar seus containers e widgets)
         self.ConteudoJanela = Frame(self.CanvasJanela)
@@ -68,12 +69,12 @@ class Application(Tk):
         self.CanvasJanela.bind("<Configure>", configurar_largura)
 
         # Suporte para Windows e MacOS (Roda do mouse)
-        def _on_mousewheel(event):
+        def _on_mousewheely(event):
             # No Windows o evento usa .delta, no Linux usa botões específicos
-            self.CanvasJanela.xview_scroll(int(-1*(event.delta/120)), "units")
+            self.CanvasJanela.yview_scroll(int(-1*(event.delta/120)), "units")
 
         # Vincula o scroll do mouse à janela inteira
-        self.CanvasJanela.bind_all("<MouseWheel>", _on_mousewheel)
+        self.CanvasJanela.bind_all("<MouseWheel>", _on_mousewheely)
         
         self.barra_topo = Frame(self.ConteudoJanela, bg="#f0f0f0")
         self.barra_topo.pack(side="top", fill="x", anchor="nw")
@@ -208,12 +209,13 @@ class Application(Tk):
         self.equipes_cadastradas = {}
         self.dados_para_enviar = {"lstcelula": [], "grafo": self.Grafo.grafo,"equipes_cadastradas":self.equipes_cadastradas}
     
+    #função configura caminhos
     def ConfigureCaminhos(self):
         self.mensagem["text"] ="Gerando Caminhos do pipeline..."
 
         qtdCelulas = self.obterQtdCelulas()
-        self.start = self.celulaStart.get()
-        self.end = self.CelulaEnd.get()
+        self.start = self.celulaStart.get().upper()
+        self.end = self.CelulaEnd.get().upper()
         if self.start != "":
             self.Grafo.adicionar_verticeStart(self.start)
         else: self.mensagem["text"] = "Insira uma celula Para ser a Inicial do Pipeline.";return
@@ -236,10 +238,10 @@ class Application(Tk):
         return "ok"    
     def NovaCelula(self):
         qtdCelulas = self.obterQtdCelulas()
-        celula = self.nomeCelula.get()
-        vertice = self.vertice.get()
-        start = self.celulaStart.get()
-        end = self.CelulaEnd.get()
+        celula = self.nomeCelula.get().upper()
+        vertice = self.vertice.get().upper()
+        start = self.celulaStart.get().upper()
+        end = self.CelulaEnd.get().upper()
 
         if start != "":
             self.Grafo.adicionar_verticeStart(start)
@@ -301,6 +303,8 @@ class Application(Tk):
         return self.qtd_celulas.get()
 
     def addVertice(self, celula: str, vertice: str):
+        celula = celula.upper()
+        vertice = vertice.upper()
         dictGrafo = self.Grafo.grafo
         if celula != "" and celula not in dictGrafo:
             self.Grafo.adicionar_vertice(celula)
@@ -335,6 +339,7 @@ class Application(Tk):
         
         # 2. Exemplo: Atualiza seu painel de texto ou log na tela principal
         self.TextoPipeline.insert("end", f"\n-> Equipe {nome_equipe} alocada na Célula {celula}\n-> Operadores {operadores} \n-> maquinas {maquinas}")
+#janela de equipes
 class JanelaEquipes(Toplevel):
     def __init__(self, master, dicionario_objetos,callback_salvar):
         super().__init__(master)
@@ -346,7 +351,6 @@ class JanelaEquipes(Toplevel):
         
         # INTERCEPTA O "X" DA JANELA: Quando o usuário clicar no X, chama o método self.ao_fechar
         self.protocol("WM_DELETE_WINDOW", self.ao_fechar)
-
         # Acessando via CHAVES STRINGS do seu dicionário estruturado
         self.lista_celulas = dicionario_objetos["lstcelula"]
         dados_grafo = dicionario_objetos["grafo"]
@@ -369,16 +373,22 @@ class JanelaEquipes(Toplevel):
             self.equipesCadastradas = Text(self.PrimeiroContainer,font= self.fontePadrao,width=40,height=10,state="disabled")
             self.equipesCadastradas["font"] = ("Arial", "10", "bold")
             self.texto_formatado = ""
+            #Dicionario equipes cadastradas
             if self.DictEquipes_cadastradas!={}:
                 for eq, dados in self.DictEquipes_cadastradas.items():
-                    self.texto_formatado = f"Equipe: {eq}\n"
+                    self.texto_formatado += f"Equipe: {eq}\n"
                     self.texto_formatado += f"  - Célula: {dados['celula']}\n"
                     self.texto_formatado += f"  - Operadores: {', '.join(dados['operadores'])}\n"
                     self.texto_formatado += f"  - Máquinas: {', '.join(dados['maquinas'])}\n"
                     self.texto_formatado += "-----------------------------\n"
-            else: self.texto_formatado = str(dicionario_objetos)
+                self.numeroEquipe = len(self.DictEquipes_cadastradas.items())
+            else: 
+                self.numeroEquipe = 0
+                self.texto_formatado = "Nenhuma No Momento"
             # Inserindo o texto formatado no final do componente
+            self.equipesCadastradas.config(state="normal")
             self.equipesCadastradas.insert(END, str(self.texto_formatado))
+            self.equipesCadastradas.config(state="disabled")
             self.equipesCadastradas.pack(side="left",fill="both",expand=True, anchor="w")
 
             lbl2 = Label(self, text="Selecione uma Célula no Pipeline:", font=("Arial", 11, "bold"))
@@ -399,7 +409,7 @@ class JanelaEquipes(Toplevel):
             self.nomeEquipeLabel = Label(self.SegundoContainer, text="Nome da equipe: ", font=self.fontePadrao)
             self.nomeEquipeLabel.pack(side="left")
             
-            self.nomeEquipe = Entry(self.SegundoContainer, textvariable=StringVar(value="Equipe 1"))
+            self.nomeEquipe = Entry(self.SegundoContainer, textvariable=StringVar(value=F"Equipe{self.numeroEquipe}"))
             self.nomeEquipe["width"] = 15
             self.nomeEquipe["font"] = self.fontePadrao
             self.nomeEquipe.pack(side=LEFT, anchor="e", padx=10, pady=10)
@@ -452,7 +462,7 @@ class JanelaEquipes(Toplevel):
             Label(self.containerLista, text="Integrantes Acumulados:", font=("Arial", 10, "bold")).pack(anchor="w")
             
             # Caixa de texto para o usuário ver quem ele já adicionou
-            self.txtVisor = Text(self.containerLista, height=8, width=50, font=self.fontePadrao)
+            self.txtVisor = Text(self.containerLista, height=8, width=50, font=self.fontePadrao,state="disabled")
             self.txtVisor.pack(fill="x", pady=5)
             
             # BOTÃO 2: Envia a lista acumulada final para o grafo/sistema
@@ -487,7 +497,9 @@ class JanelaEquipes(Toplevel):
             
         if maquina and (maquina not in self.lstMaquinas):
             self.lstMaquinas.append(maquina)
-            
+        
+        #Hbilita Para edições
+        self.txtVisor.config(state="normal")
         # Limpa os campos de texto para a próxima digitação
         self.NovoOperador.delete(0, END)
         self.NovaMaquina.delete(0, END)
@@ -496,11 +508,14 @@ class JanelaEquipes(Toplevel):
         self.txtVisor.delete("1.0", END)
         self.txtVisor.insert(END, f"Operadores: {', '.join(self.lstoperadores)}\n")
         self.txtVisor.insert(END, f"Máquinas: {', '.join(self.lstMaquinas)}\n")
+        
+        #Desabilita para edições(state inicial)
+        self.txtVisor.config(state="disabled")
     
     def finalizar_equipe(self):
        """Aproveita a mesma lógica de salvamento do método ao_fechar"""
        self.ao_fechar()
-       
+#janela de processamento de dados    
 class JanelaProcessamentoDados(Toplevel):
     def __init__(self, master, dicionario_objetos,callback_salvar):
         from PIL import ImageFile
@@ -512,6 +527,7 @@ class JanelaProcessamentoDados(Toplevel):
         self.geometry("1000x800")
         # Passamos 'self' como o master dos widgets agora!
         self.fontePadrao = ("Arial", "10")
+        self.fontePadraoMaior = ("Arial", "14")
 
         self.start = dicionario_objetos["START"]
         self.end = dicionario_objetos["END"]
@@ -550,21 +566,21 @@ class JanelaProcessamentoDados(Toplevel):
         self.ScrollbarJanela.pack(side="bottom", fill="x")
 
         # 3. CRIAÇÃO DO CANVAS (Área rolável)
-        self.CanvasJanela = Canvas(
+        self.CanvasJanela1 = Canvas(
             self.MasterFrame, 
             xscrollcommand=self.ScrollbarJanela.set,
             highlightthickness=0
         )
-        self.CanvasJanela.pack(side=LEFT, fill=BOTH, expand=True)
+        self.CanvasJanela1.pack(side=LEFT, fill=BOTH, expand=True)
 
         # Conecta a barra de rolagem ao movimento do Canvas
-        self.ScrollbarJanela.config(command=self.CanvasJanela.yview)
+        self.ScrollbarJanela.config(command=self.CanvasJanela1.yview)
 
         # 4. O FRAME CONTEÚDO (Onde você vai colocar seus containers e widgets)
-        self.ConteudoJanela = Frame(self.CanvasJanela)
+        self.ConteudoJanela = Frame(self.CanvasJanela1)
 
         # Insere o Frame de conteúdo dentro do Canvas
-        self.CanvasWindowID = self.CanvasJanela.create_window(
+        self.CanvasWindowID = self.CanvasJanela1.create_window(
             (0, 0), 
             window=self.ConteudoJanela, 
             anchor="nw"
@@ -573,23 +589,21 @@ class JanelaProcessamentoDados(Toplevel):
         # 5. CONFIGURAÇÃO DOS EVENTOS DE REDIMENSIONAMENTO
         # Atualiza a área de rolagem sempre que novos widgets forem adicionados
         def configurar_scroll(event):
-            self.CanvasJanela.configure(scrollregion=self.CanvasJanela.bbox("all"))
+            self.CanvasJanela1.configure(scrollregion=self.CanvasJanela1.bbox("all"))
 
         self.ConteudoJanela.bind("<Configure>", configurar_scroll)
 
         # Suporte para Windows e MacOS (Roda do mouse)
-        def _on_mousewheel(event):
+        def _on_mousewheelX(event):
             # No Windows o evento usa .delta, no Linux usa botões específicos
-            self.CanvasJanela.xview_scroll(int(-1*(event.delta/120)), "units")
+            self.CanvasJanela1.xview_scroll(int(-1*(event.delta/120)), "units")
 
         # Vincula o scroll do mouse à janela inteira
-        self.CanvasJanela.bind_all("<MouseWheel>", _on_mousewheel)
+        self.CanvasJanela1.bind_all("<MouseWheel>", _on_mousewheelX)
 
         self.ProcessarDadosConteiner = Frame(self.EntradaConteiner)
         self.ProcessarDadosConteiner["pady"] = 10
         self.ProcessarDadosConteiner.pack(side="bottom",anchor=W)
-        #Se ja houve Processamento de dados
-        self.BoolProcessamentoDedados = False
 
     def btnProcessar(self):
         self.dictParaProximaEntrada = {"ProximaCelulaAtual" : "",
@@ -597,86 +611,133 @@ class JanelaProcessamentoDados(Toplevel):
                                   "lstTuplesaidasContadas":{()},
                                   "ProximaQtdEntradaMaterial":0
                                   }
-        start=self.start
-        caminho = self.CaminhoDoPiPeLine
-        end=self.end
+        for filho in self.ConteudoJanela.winfo_children():
+            filho.destroy()
+        
+        #start=self.start
+        #caminho = self.CaminhoDoPiPeLine
+        #end=self.end
         boolProUltSaida=False
-        self.GerarNovaEntradaMateria(int(self.EntradaDeMateriais.get()),True)
+        self.PrimeiraEntrada = True
+        self.dicionarioProcessamento = {}
+        self.intCelulasProcessadas = -1
+        self.GerarNovaEntradaMateria(int(self.EntradaDeMateriais.get()))
         while(boolProUltSaida==False):
             boolProUltSaida=self.DesenharSaidasDoProcesso(self.listaDeSaidas,self.lstTuplesaidasContadas)
-            self.GerarNovaEntradaMateria(int(self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"]),False)
-        
-        
-    def GerarNovaEntradaMateria(self,qtdMaterialEntrada:int,PrimeiraEntrada:bool):
+            self.PrimeiraEntrada = False
+            qtd_proxima = int(self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"])
+            self.GerarNovaEntradaMateria(qtd_proxima)
+        if self.intCelulasProcessadas>=0:
+            self.DesenharFimDoProcessamento()
+            
+    #Monta o novo dado da class de entrada de materiais 
+    def GerarNovaEntradaMateria(self, qtdMaterialEntrada: int):
         if qtdMaterialEntrada > 0:
             # 3. For duplo para criar a matriz 5x10 (5 linhas e 10 colunas)
             grafo = {"A": {'A': 'A', 'vizinhos': ['B']}, "B": {'B': 'B', 'vizinhos': ['A', 'C']},"C": {'C': 'C', 'vizinhos': ['B']}}
-            if PrimeiraEntrada==True:
-                entradaA = entrada(int(self.EntradaDeMateriais.get()),str.upper(self.start),['B','C'],"ProcessoPadrão",grafo)
+
+            self.intCelulasProcessadas += 1 
+            
+            # CRIAMOS UM NOVO DICIONÁRIO LOCAL PARA ESTA RODADA
+            # Isso impede que dados de uma rodada estraguem a outra
+            dados_desta_rodada = {}
+
+            if self.PrimeiraEntrada:
+                entradaA = entrada(int(self.EntradaDeMateriais.get()), "", "ProcessoPadrão", grafo)
                 self.listaDeSaidas = entradaA.processaEmUnicoLote()
                 self.lstTuplesaidasContadas = Saida.ContarTipoDeSaida(self.listaDeSaidas)
-                if entradaA.celulaAtual != self.end:
-                    for i,celula in enumerate(self.CaminhoDoPiPeLine):
+                
+                if entradaA.celulaAtual == "":
+                    self.ProximaSaida = self.start
+                elif entradaA.celulaAtual != self.end:
+                    for i, celula in enumerate(self.CaminhoDoPiPeLine):
                         if entradaA.celulaAtual == celula[0]:
                             self.ProximaSaida = celula[1]
-                
-                #proxima entrada de dados com a primeira saida
+                self.qtdNovaEntrada = 0
                 for tuple in self.lstTuplesaidasContadas:
                     if str(tuple[0]) == Saida.PecaAcabada.name:
                         self.qtdNovaEntrada = int(tuple[1])
                         break
-                self.dictParaProximaEntrada["listaDeSaidas"] = self.listaDeSaidas
-                self.dictParaProximaEntrada["lstTuplesaidasContadas"] = self.lstTuplesaidasContadas
-                self.dictParaProximaEntrada["ProximaCelulaAtual"] = self.ProximaSaida
-                self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] = self.qtdNovaEntrada
+                
+                # Salvamos no dicionário local desta rodada
+                dados_desta_rodada["listaDeSaidas"] = self.listaDeSaidas
+                dados_desta_rodada["lstTuplesaidasContadas"] = self.lstTuplesaidasContadas
+                dados_desta_rodada["ProximaCelulaAtual"] = self.ProximaSaida
+                dados_desta_rodada["ProximaQtdEntradaMaterial"] = self.qtdNovaEntrada
+                
+                # Atualiza a referência global para o próximo 'else' usar
+                self.dictParaProximaEntrada = deepcopy(dados_desta_rodada)
+                
+                # Guarda o histórico perfeitamente isolado
+                self.dicionarioProcessamento[f"{self.intCelulasProcessadas}"] = dados_desta_rodada
+                
             else:
-                entradaB = entrada(self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] ,
-                                   self.ProximaSaida,['C'],
+                # 1. BUSCA O VALOR CORRETO DA ANTERIOR:
+                # A entrada de B DEVE SER a quantidade de peças boas (PecaAcabada) que saíram de A
+                AnteriorQtdEntradaMaterial = int(self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"])
+
+                entradaB = entrada(AnteriorQtdEntradaMaterial,
+                                   self.ProximaSaida,
                                    "ProcessoPadrão",
                                    grafo)
                 self.listaDeSaidas = entradaB.processaEmUnicoLote()
                 self.lstTuplesaidasContadas = Saida.ContarTipoDeSaida(self.listaDeSaidas)
+                
                 if entradaB.celulaAtual != self.end:
                     for i,celula in enumerate(self.CaminhoDoPiPeLine):
                         if entradaB.celulaAtual == celula[0]:
                             self.ProximaSaida = celula[1]
-
-                 #proxima entrada de dados com a primeira saida
+                
+                # 2. PROCURA QUANTAS PEÇAS BOAS A CÉLULA ATUAL GEROU PARA A PRÓXIMA:
+                # Zeramos a variável para não acumular lixo ou referências antigas da memória
+                self.qtdNovaEntrada = 0
                 for tuple in self.lstTuplesaidasContadas:
+                    # Garantimos que acessamos o nome [0] e a quantidade [1] explicitamente
                     if str(tuple[0]) == Saida.PecaAcabada.name:
                         self.qtdNovaEntrada = int(tuple[1])
                         break
+                    
+                # 3. SALVA NO SEU DICIONÁRIO DE HISTÓRICO:
                 self.dictParaProximaEntrada["listaDeSaidas"] = self.listaDeSaidas
                 self.dictParaProximaEntrada["lstTuplesaidasContadas"] = self.lstTuplesaidasContadas
                 self.dictParaProximaEntrada["ProximaCelulaAtual"] = self.ProximaSaida
                 self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] = self.qtdNovaEntrada
+                self.dictParaProximaEntrada["AnteriorQtdEntradaMaterial"] = AnteriorQtdEntradaMaterial
+                
+                # O SEGREDO DO ISOLAMENTO: Usamos o copy() aqui para congelar o estado atual do dicionário
+                self.dicionarioProcessamento[f"{self.intCelulasProcessadas}"] = self.dictParaProximaEntrada.copy()
+
         else:
-            self.lblMensagem[Text]="Insira um numero maior que zero"
+            self.lblMensagem["text"] = "Insira um numero maior que zero"  # Corrigido erro de sintaxe aqui (Text -> "text")
             self.lblMensagem.pack(side=LEFT)
 
+    # Monta os componentes dos processamento da entrada
     def DesenharSaidasDoProcesso(self,listaDeSaidas,lstTuplesaidasContadas):
         from PIL import ImageFile
         from PIL import Image
         from PIL import Image, ImageTk
 
-        self.PrimeiroContainer = Frame(self.ConteudoJanela)
-        self.PrimeiroContainer["pady"] = 10
-        self.PrimeiroContainer.pack(side=LEFT,anchor="w")
+        self.PrimeiroContainer = Frame(self.ConteudoJanela,padx="25")
+        self.PrimeiroContainer.pack(side=LEFT)
 
-        self.frame_matriz = Frame(self.PrimeiroContainer, bg="lightgray")
+        self.frame_matriz = Frame(self.PrimeiroContainer, bg="lightgray",padx="25",)
         self.frame_matriz.pack(fill="both") 
-        #Se ja houve processamento coloca a seta e é importante se pega o titulo da celula start ou da proxima
-        if self.BoolProcessamentoDedados == True:
-            self.SetaContainer = Frame(self.ConteudoJanela)
-            self.SetaContainer["pady"] = 10
-            self.SetaContainer.pack(side=LEFT,anchor="w")
-            SetaDireita = Image.open("setaDireita.png")
-            setaDir = ImageTk.PhotoImage(SetaDireita)
-            Label(self.SetaContainer, image=setaDir, padx=5, pady=5).pack(side=LEFT,anchor="center")
-        if self.BoolProcessamentoDedados == True:
-            label = Label(self.PrimeiroContainer, text=self.start, padx=0, pady=0).pack(side="top",anchor="center")
+        
+        #Se é o primeiro endereço do pipeline busca da tela a informações
+        #as outras vezes busca do processo
+        if self.PrimeiraEntrada:
+            Label(self.PrimeiroContainer, text=f"Celula Processada:{self.start}", padx=0, pady=0).pack(side="top",anchor="center")
+            Label(self.PrimeiroContainer, text=f"Entrada processadas: {self.EntradaDeMateriais.get()}",font=self.fontePadraoMaior
+                  ).pack()
         else:
-            label = Label(self.PrimeiroContainer, text=self.dictParaProximaEntrada["ProximaCelulaAtual"], padx=0, pady=0).pack(side="top",anchor="center")
+           Label(self.PrimeiroContainer, text=f"Celula Processada: {self.dictParaProximaEntrada["ProximaCelulaAtual"]}", padx=0, pady=0).pack(side="top",anchor="center")
+           Label(self.PrimeiroContainer, text=f"Entrada processadas: {self.dictParaProximaEntrada["AnteriorQtdEntradaMaterial"]}",font=self.fontePadraoMaior
+                  ).pack()
+
+        self.SegundoContainer = Frame(self.PrimeiroContainer)
+        self.SegundoContainer["pady"] = 10
+        self.SegundoContainer.pack(side="top", fill="x")
+        
         # 1. Abre a imagem original (substitua pelo nome correto do seu arquivo)
         imagem_original = Image.open("triangulos.png")
         
@@ -717,37 +778,89 @@ class JanelaProcessamentoDados(Toplevel):
                 # O SEGREDO DA REFERÊNCIA: Salva a imagem escolhida diretamente na propriedade interna do widget criado
                 label.image = imagem_definida   
 
-        self.SegundoContainer = Frame(self.ConteudoJanela)
-        self.SegundoContainer["pady"] = 10
-        self.SegundoContainer.pack(side="left",anchor="s")
-
+        #Contagem na tela da representação dos itens processados(A grid com as imagens)
         for tuple in lstTuplesaidasContadas:
             if tuple[0] == Saida.PecaAcabada.name and tuple[1] > 0:
-                Label(self.SegundoContainer, image=verde, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
-                Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+                Label(self.SegundoContainer, image=verde, bd=0, padx=0, pady=0).pack(side="left",anchor=S)
+                Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=S)
             if tuple[0] == Saida.PontasDeEstoque.name and tuple[1] > 0:
-                Label(self.SegundoContainer, image=amarelo, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
-                Label(self.SegundoContainer, text=" = " +str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)                
+                Label(self.SegundoContainer, image=amarelo, bd=0, padx=0, pady=0).pack(side="left",anchor=S)
+                Label(self.SegundoContainer, text=" = " +str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=S)                
             if tuple[0] == Saida.Reciclagem.name and tuple[1] > 0:
-                Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=W)
-                Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=W)
+                Label(self.SegundoContainer, image=vermelho, bd=0, padx=0, pady=0).pack(side="left",anchor=S)
+                Label(self.SegundoContainer, text=" = " + str(tuple[1]), font=self.fontePadrao).pack(side="left",anchor=S)
         
-        self.TerceiroContainer = Frame(self.SegundoContainer)
-        self.TerceiroContainer["pady"] = 10
-        self.TerceiroContainer.pack(side="bottom",anchor="sw")
-
         nomeEquipe = "Equipe X"
         integrantesCelula = {"Operadores": ["A", "B", "C"], "Máquinas": ["M1", "M2"]}
-        texto_equipe = f"Equipe {nomeEquipe}, Integrantes: {', '.join(integrantesCelula['Operadores'])}, maquinas: {', '.join(integrantesCelula['Máquinas'])}"
-        # --- ÁREA DA EQUIPE (ABAIXO DO BLOCO) ---
-        # O Label contendo as informações da equipe fica preso na mesma coluna, logo abaixo
-        #line 744
-        #lbl_equipe = Label(self.SegundoContainer, text=texto_equipe, font=self.fontePadrao, justify="left", anchor="n")
-        #lbl_equipe.pack(side="bottom", fill="x")
+        texto_equipe = f"Equipe {nomeEquipe} \n Integrantes: {', '.join(integrantesCelula['Operadores'])}\n maquinas: {', '.join(integrantesCelula['Máquinas'])}"
+
+        lbl_equipe = Label(self.PrimeiroContainer, text=texto_equipe, font=self.fontePadrao, justify="left", anchor="n")
+        lbl_equipe.pack()
 
         # Adicione isso na última linha da função:
         self.ConteudoJanela.update_idletasks()
-        self.CanvasJanela.configure(scrollregion=self.CanvasJanela.bbox("all"))
+        self.CanvasJanela1.configure(scrollregion=self.CanvasJanela1.bbox("all"))
         if self.end == self.dictParaProximaEntrada["ProximaCelulaAtual"] or self.end == self.start:
             return True 
         else: return FALSE
+    #Posto de Triagem / Inspeção Final - log juntando todas as peças que não viram nova entrada
+    def DesenharFimDoProcessamento(self):
+        self.PrimeiroContainer = Frame(self.ConteudoJanela, padx="25")
+        self.PrimeiroContainer.pack(side=LEFT)
+
+        self.frame_matriz = Frame(self.PrimeiroContainer, bg="lightgray", padx="25")
+        self.frame_matriz.pack(fill="both") 
+        Label(self.PrimeiroContainer, text="Posto de Triagem / Inspeção Final:", padx=0, pady=0).pack(anchor="w")
+        
+        lstSaidasProcessadas = []
+        
+        # 1. Descobrimos qual é a última chave numérica que foi de fato populada no histórico
+        chaves_ordenadas = sorted(self.dicionarioProcessamento.keys(), key=int)
+        ultima_chave_processada = int(chaves_ordenadas[-1]) if chaves_ordenadas else -1
+        
+        # Iteramos pelas chaves gravadas
+        for chave_str in chaves_ordenadas:
+            intProcessados = int(chave_str)
+            objDicionario = self.dicionarioProcessamento[chave_str]
+            
+            # Identifica o nome da célula no histórico
+            nome_celula = self.start if intProcessados == 0 else objDicionario.get("ProximaCelulaAtual", "Desconhecida")
+            
+            for tupleSaidaContada in objDicionario["lstTuplesaidasContadas"]:
+                nome_saida = str(tupleSaidaContada[0])
+                quantidade = int(tupleSaidaContada[1])
+                
+                # Filtro de Segurança: Ignora itens zerados ou tipo Default
+                if quantidade <= 0 or nome_saida == Saida.Default.name:
+                    continue
+                
+                # REGRA MATEMÁTICA PARA FECHAR COM O INPUT:
+                # Se for a ÚLTIMA célula que o pipeline conseguiu rodar até agora, 
+                # nós mostramos TUDO dela (inclusive as Peças Acabadas que pararam nela).
+                if intProcessados == ultima_chave_processada:
+                    lstSaidasProcessadas.append((nome_celula, nome_saida, quantidade))
+                else:
+                    # Se for uma célula anterior do histórico, as peças acabadas já mudaram 
+                    # de célula. Então guardamos APENAS os descartes para não duplicar a soma.
+                    if nome_saida != Saida.PecaAcabada.name:
+                        lstSaidasProcessadas.append((nome_celula, nome_saida, quantidade))
+
+        # Desenha as linhas no painel da direita
+        for item in lstSaidasProcessadas:
+            celula, saida, qtd = item
+            Label(
+                self.PrimeiroContainer, 
+                text=f"Celula de Processamento: {celula} Saida: {saida} Qtd : {qtd}", 
+                padx=0, pady=0, 
+                font=self.fontePadrao
+            ).pack(anchor="w")
+        if hasattr(self, "canvas"):
+            self.CanvasJanela1.configure(scrollregion=self.CanvasJanela1.bbox("all"))
+            
+
+            #self.dictParaProximaEntrada["listaDeSaidas"] = self.listaDeSaidas
+            #self.dictParaProximaEntrada["lstTuplesaidasContadas"] = self.lstTuplesaidasContadas
+            #self.dictParaProximaEntrada["ProximaCelulaAtual"] = self.ProximaSaida
+            #self.dictParaProximaEntrada["ProximaQtdEntradaMaterial"] = self.qtdNovaEntrada
+            #self.dictParaProximaEntrada["AnteriorQtdEntradaMaterial"] = AnteriorQtdEntradaMaterial
+    

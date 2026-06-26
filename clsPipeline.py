@@ -41,12 +41,11 @@ class PropriedadesVertice:
 class entrada:        
     qtdmateriaPrima: int = 0
     celulaAtual: str = ""
-    celulasPossiveis:  list[celula] = field(default_factory=list)
     ProcessoDeProducao: str = "Processo Padrão"
     grafo: dict[any, PropriedadesVertice] = field(default_factory=dict)
     def SortearQualidadeDaPeca(self):
         numSorteado = random.randint(0, 100) * 1.5
-        if numSorteado >= 25:
+        if numSorteado >= 24.1:
             return Saida.PecaAcabada
         if numSorteado <= 24 and numSorteado > 5:
             return Saida.PontasDeEstoque
@@ -122,8 +121,13 @@ class Saida(enum.Enum):
         for saida in listaDeSaidas:
             if saida in contagem:
                 contagem[saida] += 1
-        # Retorna a lista de tuplas (nome, quantidade) dinamicamente
-        return [(saida.name, qtd) for saida, qtd in contagem.items()]
+        # Retorna APENAS os itens que foram gerados (qtd > 0)
+        # E trata de forma segura caso algum item não possua o atributo ".name"
+        return [
+        (getattr(saida, 'name', str(saida)), qtd) 
+        for saida, qtd in contagem.items() 
+        if qtd > 0
+    ]
 
 @dataclass
 class SaidaDaCelula():

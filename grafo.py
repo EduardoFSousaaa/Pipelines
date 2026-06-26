@@ -13,6 +13,7 @@ class Grafo:
     def __getitem__(self, chave):
         return self.grafo.get(chave, None)
     def adicionar_vertice(self, vertice:str):
+        vertice = vertice.upper()
         if self.grafo["START"] == "":
             self.grafo["START"] = vertice
             self.grafo["END"] = vertice
@@ -20,6 +21,8 @@ class Grafo:
             self.grafo[vertice] = {"celula:":celula(vertice,None,None,{},50,(60,60),False),"vizinhos" : [],"saida":[]}
             self.grafo["lst_celulas"].append(vertice)
     def adicionar_aresta(self, v1:str, v2:str):
+        v1 = v1.upper()
+        v2 = v2.upper()
         self.adicionar_vertice(v1)
         self.adicionar_vertice(v2)
         if v2 not in self.grafo[v1]["vizinhos"]:
@@ -30,9 +33,11 @@ class Grafo:
             self.grafo[v2]["vizinhos"].append(v1)
             #self.grafo[v2]["celula"].append(celula.vizinhos(v1))
     def adicionar_verticeStart(self,vStart:str):
+        vStart = vStart.upper()
         self.grafo["START"] = vStart
     def adicionar_verticeEnd(self,vEnd:str):
-        self.grafo["END"] = vEnd
+        vEnd = vEnd.upper()
+        self.grafo["END"] = vEnd.upper()
 
     def caminhosDoPipeline(self):
         celulaSTART = self.grafo["START"]
